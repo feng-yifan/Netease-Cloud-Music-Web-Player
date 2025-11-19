@@ -1,0 +1,19 @@
+{
+  "name": "netease-cloud-music-web-player",
+  "version": "0.0.1",
+  "description": "网易云音乐网页播放器",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "npm run package",
+    "package:linux": "electron-builder --linux --dir",
+    "package": "electron-builder"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/feng-yifan/Netease-Cloud-Music-Web-Player.git"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}

@@ -1,0 +1,22 @@
+# Maintainer: fengyifan <fengyifan@outlook.com>
+pkgname=netease-cloud-music-web-player
+pkgver=0.0.1
+pkgrel=1
+pkgdesc="基于网页播放器封装的网易云音乐客户端"
+arch=('x86_64')
+url="https://github.com/feng-yifan/Netease-Cloud-Music-Web-Player"
+license=('MIT')
+depends=('electron33' 'dependency2')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/$pkgver.tar.gz")
+md5sums=('SKIP')  # 建议先使用SKIP测试，成功后可用updpkgsums生成
+
+build() {
+  cd "$pkgname-$pkgver"
+  ./configure --prefix=/usr
+  make
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  make DESTDIR="$pkgdir/" install
+}
