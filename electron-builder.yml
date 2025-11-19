@@ -1,0 +1,41 @@
+appId: com.fengyifan.netease-cloud-music
+productName: 网易云音乐
+
+# 包含的文件
+files:
+  - src/**/*
+  - package.json
+  - build/*.desktop
+  - build/*.svg
+
+# 排除开发相关的文件
+!**/.idea/
+!**/.vscode/
+!**/.gitignore
+!**/.github/
+!**/electron-builder.yml
+
+# ASAR 配置
+asar: true
+asarUnpack: []
+
+# 不打包任何额外的运行时组件（仅保留 ASAR）
+# 注意：electron-builder --dir 会创建未打包的目录结构
+# 这样我们可以从 resources 目录中提取 ASAR
+
+linux:
+  target:
+    - dir
+  category: AudioVideo
+  icon: src/assets/icon.png
+
+# 禁用其他平台的构建
+mac:
+  target: []
+win:
+  target: []
+
+# 不创建安装包，仅生成目录结构（用于提取 ASAR）
+directories:
+  output: dist
+  buildResources: build

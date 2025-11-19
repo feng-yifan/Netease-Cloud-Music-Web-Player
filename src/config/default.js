@@ -15,9 +15,7 @@ const config = {
     defaultWidth: 1200,
     defaultHeight: 800,
     minWidth: 800,
-    minHeight: 600,
-    title: '网易云音乐',
-    iconPath: path.join(__dirname, '../../build/netease-cloud-music.svg')
+    minHeight: 600
   },
 
   // 状态文件配置
@@ -36,7 +34,7 @@ const config = {
   // 托盘配置
   tray: {
     tooltip: '网易云音乐',
-    iconPath: path.join(__dirname, '../../build/netease-cloud-music.png')
+    iconPath: path.join(__dirname, '../assets/icon.png')
   }
 };
 

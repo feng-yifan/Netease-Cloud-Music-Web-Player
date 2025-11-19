@@ -1,0 +1,80 @@
+name: 打包 ASAR 应用
+
+on:
+  push:
+    tags:
+      - '\d+.\d+.\d+'
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: 安装 pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: 获取 pnpm store 目录
+        id: pnpm-cache
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: 设置 pnpm 缓存
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 创建 dist 目录
+        run: mkdir -p dist
+
+      - name: 打包应用（生成目录结构）
+        run: pnpm package:linux
+
+      - name: 提取 ASAR 文件
+        run: |
+          # electron-builder --dir 会生成 linux-unpacked 目录
+          # ASAR 文件位于 resources/app.asar
+          ASAR_PATH="dist/linux-unpacked/resources/app.asar"
+
+          if [ ! -f "$ASAR_PATH" ]; then
+            echo "错误: ASAR 文件不存在: $ASAR_PATH"
+            echo "检查 dist 目录结构:"
+            find dist -type f | head -20
+            exit 1
+          fi
+
+          echo "✓ 找到 ASAR 文件: $ASAR_PATH"
+          echo "大小: $(du -h $ASAR_PATH | cut -f1)"
+          ls -lh $ASAR_PATH
+
+      - name: 上传 ASAR 文件
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-asar
+          path: dist/linux-unpacked/resources/app.asar
+          retention-days: 30
+
+      - name: 显示 ASAR 信息
+        run: |
+          ASAR_PATH="dist/linux-unpacked/resources/app.asar"
+          echo "=== ASAR 文件信息 ==="
+          echo "文件路径: $ASAR_PATH"
+          echo "文件大小: $(du -h $ASAR_PATH | cut -f1)"
+          echo "MD5: $(md5sum $ASAR_PATH | cut -d' ' -f1)"
+          echo "=== 构建完成 ==="
