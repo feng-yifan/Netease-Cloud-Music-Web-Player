@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=Netease Cloud Music
+Name[zh_CN]=网易云音乐
+Comment=Netease Cloud Music Web Player Application
+Comment[zh_CN]=基于 Electron 封装的网易云音乐客户端
+Exec=/usr/bin/netease-cloud-music-web-player %U
+Icon=netease-cloud-music
+Type=Application
+Categories=AudioVideo;Audio;Player;
+Keywords=music;netease;cloud;player;audio;
+Keywords[zh_CN]=音乐;网易云;播放器;在线;音频;在线音乐;
+StartupNotify=true
+StartupWMClass=Netease Cloud Music Web Player
+MimeType=audio/mpeg;audio/flac;audio/x-flac;application/ogg;audio/x-vorbis+ogg;audio/x-wav;
