@@ -3,17 +3,17 @@ productName: 网易云音乐
 
 # 包含的文件
 files:
-  - src/**/*
+  - src/**
   - package.json
   - build/*.desktop
   - build/*.svg
-
-# 排除开发相关的文件
-!**/.idea/
-!**/.vscode/
-!**/.gitignore
-!**/.github/
-!**/electron-builder.yml
+  # 排除开发相关的文件
+  - '!**/.idea'
+  - '!**/.vscode'
+  - '!**/.gitignore'
+  - '!**/.github'
+  - '!**/electron-builder.yml'
+  - '!**/package'
 
 # ASAR 配置
 asar: true
