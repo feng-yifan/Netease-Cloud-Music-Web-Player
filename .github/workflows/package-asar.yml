@@ -19,32 +19,14 @@ jobs:
         with:
           node-version: '20.x'
 
-      - name: 安装 pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-
-      - name: 获取 pnpm store 目录
-        id: pnpm-cache
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: 设置 pnpm 缓存
-        uses: actions/cache@v3
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
       - name: 安装依赖
-        run: pnpm install --frozen-lockfile
+        run: npm install
 
       - name: 创建 dist 目录
         run: mkdir -p dist
 
       - name: 打包应用（生成目录结构）
-        run: pnpm package:linux
+        run: npm run package:linux
 
       - name: 提取 ASAR 文件
         run: |
