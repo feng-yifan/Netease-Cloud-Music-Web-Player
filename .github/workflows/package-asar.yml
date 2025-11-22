@@ -76,7 +76,7 @@ jobs:
           pacman -Sy --noconfirm base-devel
       - name: 生成 .SRCINFO
         run: |
-          makepkg --printsrcinfo > .SRCINFO
+          sudo -u nobody sh -c 'makepkg --printsrcinfo > .SRCINFO'
       - name: 上传 PKGBUILD 和 .SRCINFO
         uses: actions/upload-artifact@v4
         with:
