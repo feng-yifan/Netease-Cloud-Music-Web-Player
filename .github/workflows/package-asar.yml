@@ -50,3 +50,71 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "${{ github.ref_name }}" "${{ env.ASAR_RELEASE_PATH }}" "${{ env.ASAR_CHECKSUM_PATH }}" --clobber
+
+      - name: 保存 SHA256 到 cache
+        if: github.ref_type == 'tag'
+        run: |
+          awk '{print $1}' "${{ env.ASAR_CHECKSUM_PATH }}" > sha256-value.txt
+
+      - name: 上传 SHA256 为 artifact
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sha256-value
+          path: sha256-value.txt
+          retention-days: 1
+
+  publish-aur:
+    name: 发布到 AUR
+    runs-on: ubuntu-latest
+    needs: [package]
+    if: github.ref_type == 'tag'
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 下载 SHA256 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sha256-value
+
+      - name: 读取 SHA256
+        id: vars
+        run: |
+          echo "sha256=$(cat sha256-value.txt)" >> $GITHUB_OUTPUT
+
+      - name: 配置 SSH 密钥
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+
+      - name: 克隆 AUR 仓库
+        run: |
+          git clone ${{ secrets.AUR_REPO_URL }} aur-repo
+          cd aur-repo
+          git config user.name "${{ secrets.AUR_GIT_USER_NAME }}"
+          git config user.email "${{ secrets.AUR_GIT_USER_EMAIL }}"
+
+      - name: 复制并更新 PKGBUILD
+        run: |
+          cp package/arch/aur/PKGBUILD aur-repo/
+          cd aur-repo
+
+          sed -i "s/__PKGVER__/${{ github.ref_name }}/g" PKGBUILD
+          sed -i "s/__SHA256__/${{ steps.vars.outputs.sha256 }}/g" PKGBUILD
+
+          makepkg --printsrcinfo > .SRCINFO
+
+      - name: 提交并推送到 AUR
+        run: |
+          cd aur-repo
+
+          if git diff --quiet; then
+            exit 0
+          fi
+
+          git add PKGBUILD .SRCINFO
+          git commit -m "Update to version ${{ github.ref_name }}"
+
+          git push origin master
