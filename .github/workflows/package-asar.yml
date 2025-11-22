@@ -1,34 +1,25 @@
-name: 打包 ASAR 应用
-
+name: 打包并上传 AUR
 on:
   push:
     tags:
       - '\d+.\d+.\d+'
-  workflow_dispatch:
-
 jobs:
   package:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
-
       - name: 设置 Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-
       - name: 安装依赖
         run: npm install
-
       - name: 打包应用
         run: npm run package:linux
-
       - name: 创建资源包
-        if: github.ref_type == 'tag'
         run: |
           PKGNAME=$(node -p "require('./package.json').name")
           RESOURCES_DIR="dist/resources"
@@ -37,84 +28,98 @@ jobs:
           cp "build/netease-cloud-music-web-player.desktop" "$RESOURCES_DIR/"
           cp "build/netease-cloud-music-web-player" "$RESOURCES_DIR/"
           cp "build/netease-cloud-music.svg" "$RESOURCES_DIR/"
-          RESOURCES_PACKAGE="dist/${PKGNAME}-resources-${{ github.ref_name }}.tar.gz"
+          RESOURCES_PACKAGE="dist/${PKGNAME}-${{ github.ref_name }}.tar.gz"
           tar -czf "$RESOURCES_PACKAGE" -C "$RESOURCES_DIR" .
           cd dist
-          sha256sum "${PKGNAME}-resources-${{ github.ref_name }}.tar.gz" > "${PKGNAME}-resources-${{ github.ref_name }}.tar.gz.sha256"
+          sha256sum "${PKGNAME}-${{ github.ref_name }}.tar.gz" > "${PKGNAME}-${{ github.ref_name }}.tar.gz.sha256"
           echo "ASAR_RELEASE_PATH=$RESOURCES_PACKAGE" >> $GITHUB_ENV
-          echo "ASAR_CHECKSUM_PATH=dist/${PKGNAME}-resources-${{ github.ref_name }}.tar.gz.sha256" >> $GITHUB_ENV
-
+          echo "ASAR_CHECKSUM_PATH=dist/${PKGNAME}-${{ github.ref_name }}.tar.gz.sha256" >> $GITHUB_ENV
       - name: 上传到 GitHub Release
-        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "${{ github.ref_name }}" "${{ env.ASAR_RELEASE_PATH }}" "${{ env.ASAR_CHECKSUM_PATH }}" --clobber
-
       - name: 保存 SHA256 到 cache
-        if: github.ref_type == 'tag'
         run: |
           awk '{print $1}' "${{ env.ASAR_CHECKSUM_PATH }}" > sha256-value.txt
-
       - name: 上传 SHA256 为 artifact
-        if: github.ref_type == 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: sha256-value
           path: sha256-value.txt
           retention-days: 1
-
-  publish-aur:
-    name: 发布到 AUR
+  prepare-aur:
+    name: 准备 AUR 包文件
     runs-on: ubuntu-latest
     needs: [package]
-    if: github.ref_type == 'tag'
-
+    container:
+      image: archlinux:latest
+      options: --privileged
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
-
       - name: 下载 SHA256 artifact
         uses: actions/download-artifact@v4
         with:
           name: sha256-value
-
       - name: 读取 SHA256
         id: vars
         run: |
           echo "sha256=$(cat sha256-value.txt)" >> $GITHUB_OUTPUT
-
+      - name: 更新 PKGBUILD
+        run: |
+          cp package/arch/aur/PKGBUILD .
+          sed -i "s/__PKGVER__/${{ github.ref_name }}/g" PKGBUILD
+          sed -i "s/__SHA256__/${{ steps.vars.outputs.sha256 }}/g" PKGBUILD
+      - name: 安装基础开发工具
+        run: |
+          pacman -Sy --noconfirm base-devel
+      - name: 生成 .SRCINFO
+        run: |
+          makepkg --printsrcinfo > .SRCINFO
+      - name: 上传 PKGBUILD 和 .SRCINFO
+        uses: actions/upload-artifact@v4
+        with:
+          name: aur-files
+          path: |
+            PKGBUILD
+            .SRCINFO
+          retention-days: 1
+  publish-aur:
+    name: 发布到 AUR
+    runs-on: ubuntu-latest
+    needs: [prepare-aur]
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
       - name: 配置 SSH 密钥
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-
+      - name: 下载 AUR 文件
+        uses: actions/download-artifact@v4
+        with:
+          name: aur-files
+      - name: 添加 AUR 主机到 known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
       - name: 克隆 AUR 仓库
         run: |
-          git clone ${{ secrets.AUR_REPO_URL }} aur-repo
+          git clone ${{ vars.AUR_REPO_URL }} aur-repo
           cd aur-repo
-          git config user.name "${{ secrets.AUR_GIT_USER_NAME }}"
-          git config user.email "${{ secrets.AUR_GIT_USER_EMAIL }}"
-
-      - name: 复制并更新 PKGBUILD
+          git config user.name "${{ vars.AUR_GIT_USER_NAME }}"
+          git config user.email "${{ vars.AUR_GIT_USER_EMAIL }}"
+      - name: 复制 AUR 文件到仓库
         run: |
-          cp package/arch/aur/PKGBUILD aur-repo/
-          cd aur-repo
-
-          sed -i "s/__PKGVER__/${{ github.ref_name }}/g" PKGBUILD
-          sed -i "s/__SHA256__/${{ steps.vars.outputs.sha256 }}/g" PKGBUILD
-
-          makepkg --printsrcinfo > .SRCINFO
-
+          cp PKGBUILD aur-repo/
+          cp .SRCINFO aur-repo/
       - name: 提交并推送到 AUR
         run: |
           cd aur-repo
-
           if git diff --quiet; then
             exit 0
           fi
-
           git add PKGBUILD .SRCINFO
           git commit -m "Update to version ${{ github.ref_name }}"
-
           git push origin master

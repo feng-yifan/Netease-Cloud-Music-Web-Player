@@ -7,11 +7,11 @@ arch=('x86_64')
 license=('unknown')
 depends=('electron')
 _url="https://github.com/feng-yifan/netease-cloud-music-web-player"
-source=("$pkgname-resources-$pkgver.tar.gz::$_url/releases/download/$pkgver/$pkgname-resources-$pkgver.tar.gz")
+source=("$pkgname-$pkgver.tar.gz::$_url/releases/download/$pkgver/$pkgname-$pkgver.tar.gz")
 sha256sums=('__SHA256__')
 package() {
 	cd "$srcdir"
-	tar -xzf "$pkgname-resources-$pkgver.tar.gz"
+	tar -xzf "$pkgname-$pkgver.tar.gz"
 	install -dm755 "$pkgdir/usr/lib/$pkgname"
 	cp "app.asar" "$pkgdir/usr/lib/$pkgname/"
 	install -dm755 "$pkgdir/usr/bin"
