@@ -24,75 +24,29 @@ jobs:
       - name: 安装依赖
         run: npm install
 
-      - name: 创建 dist 目录
-        run: mkdir -p dist
-
-      - name: 打包应用（生成目录结构）
+      - name: 打包应用
         run: npm run package:linux
 
-      - name: 提取 ASAR 文件
+      - name: 创建资源包
+        if: github.ref_type == 'tag'
         run: |
-          # electron-builder --dir 会生成 linux-unpacked 目录
-          # ASAR 文件位于 resources/app.asar
-          ASAR_PATH="dist/linux-unpacked/resources/app.asar"
-
-          if [ ! -f "$ASAR_PATH" ]; then
-            echo "错误: ASAR 文件不存在: $ASAR_PATH"
-            echo "检查 dist 目录结构:"
-            find dist -type f | head -20
-            exit 1
-          fi
-
-          echo "✓ 找到 ASAR 文件: $ASAR_PATH"
-          echo "大小: $(du -h $ASAR_PATH | cut -f1)"
-          ls -lh $ASAR_PATH
-
-      - name: 上传 ASAR 文件
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-asar
-          path: dist/linux-unpacked/resources/app.asar
-          retention-days: 30
-
-      - name: 创建资源包（ASAR + desktop + SVG）
-        run: |
-          ASAR_PATH="dist/linux-unpacked/resources/app.asar"
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            TAG_NAME="${{ github.ref_name }}"
-            RESOURCES_DIR="dist/resources"
-            mkdir -p "$RESOURCES_DIR"
-            cp "$ASAR_PATH" "$RESOURCES_DIR/"
-            cp "build/netease-cloud-music-web-player.desktop" "$RESOURCES_DIR/"
-            cp "build/netease-cloud-music-web-player" "$RESOURCES_DIR/"
-            cp "build/netease-cloud-music.svg" "$RESOURCES_DIR/"
-            RESOURCES_PACKAGE="dist/${pkgname}-resources-${TAG_NAME}.tar.gz"
-            tar -czf "$RESOURCES_PACKAGE" -C "$RESOURCES_DIR" .
-            cd dist
-            sha256sum "${pkgname}-resources-${TAG_NAME}.tar.gz" > "${pkgname}-resources-${TAG_NAME}.tar.gz.sha256"
-            echo "ASAR_RELEASE_PATH=$RESOURCES_PACKAGE" >> $GITHUB_ENV
-            echo "ASAR_CHECKSUM_PATH=dist/${pkgname}-resources-${TAG_NAME}.tar.gz.sha256" >> $GITHUB_ENV
-            echo "创建资源包: $RESOURCES_PACKAGE"
-            echo "生成校验文件: ${pkgname}-resources-${TAG_NAME}.tar.gz.sha256"
-          else
-            echo "ASAR_RELEASE_PATH=$ASAR_PATH" >> $GITHUB_ENV
-          fi
+          PKGNAME=$(node -p "require('./package.json').name")
+          RESOURCES_DIR="dist/resources"
+          mkdir -p "$RESOURCES_DIR"
+          cp "dist/linux-unpacked/resources/app.asar" "$RESOURCES_DIR/"
+          cp "build/netease-cloud-music-web-player.desktop" "$RESOURCES_DIR/"
+          cp "build/netease-cloud-music-web-player" "$RESOURCES_DIR/"
+          cp "build/netease-cloud-music.svg" "$RESOURCES_DIR/"
+          RESOURCES_PACKAGE="dist/${PKGNAME}-resources-${{ github.ref_name }}.tar.gz"
+          tar -czf "$RESOURCES_PACKAGE" -C "$RESOURCES_DIR" .
+          cd dist
+          sha256sum "${PKGNAME}-resources-${{ github.ref_name }}.tar.gz" > "${PKGNAME}-resources-${{ github.ref_name }}.tar.gz.sha256"
+          echo "ASAR_RELEASE_PATH=$RESOURCES_PACKAGE" >> $GITHUB_ENV
+          echo "ASAR_CHECKSUM_PATH=dist/${PKGNAME}-resources-${{ github.ref_name }}.tar.gz.sha256" >> $GITHUB_ENV
 
       - name: 上传到 GitHub Release
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "正在上传资源包到 Release ${{ github.ref_name }}..."
           gh release upload "${{ github.ref_name }}" "${{ env.ASAR_RELEASE_PATH }}" "${{ env.ASAR_CHECKSUM_PATH }}" --clobber
-          echo "✓ 资源包和校验文件已上传到 Release"
-
-      - name: 显示资源包信息
-        run: |
-          echo "=== 资源包信息 ==="
-          echo "文件路径: ${{ env.ASAR_RELEASE_PATH }}"
-          echo "校验文件: ${{ env.ASAR_CHECKSUM_PATH }}"
-          if [ -f "${{ env.ASAR_RELEASE_PATH }}" ]; then
-            echo "文件大小: $(du -h ${{ env.ASAR_RELEASE_PATH }} | cut -f1)"
-            echo "SHA256: $(sha256sum ${{ env.ASAR_RELEASE_PATH }} | cut -d' ' -f1)"
-          fi
-          echo "=== 构建完成 ==="
