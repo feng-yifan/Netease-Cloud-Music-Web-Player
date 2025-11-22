@@ -9,6 +9,8 @@ on:
 jobs:
   package:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: 检出代码
@@ -52,11 +54,32 @@ jobs:
           path: dist/linux-unpacked/resources/app.asar
           retention-days: 30
 
-      - name: 显示 ASAR 信息
+      - name: 重命名 ASAR 文件（添加版本号）
         run: |
           ASAR_PATH="dist/linux-unpacked/resources/app.asar"
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG_NAME="${{ github.ref_name }}"
+            NEW_NAME="dist/app-${TAG_NAME}.asar"
+            cp "$ASAR_PATH" "$NEW_NAME"
+            echo "ASAR_RELEASE_PATH=$NEW_NAME" >> $GITHUB_ENV
+            echo "重命名: $ASAR_PATH -> $NEW_NAME"
+          else
+            echo "ASAR_RELEASE_PATH=$ASAR_PATH" >> $GITHUB_ENV
+          fi
+
+      - name: 上传到 GitHub Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "正在上传 ASAR 到 Release ${{ github.ref_name }}..."
+          gh release upload "${{ github.ref_name }}" "${{ env.ASAR_RELEASE_PATH }}" --clobber
+          echo "✓ ASAR 文件已上传到 Release"
+
+      - name: 显示 ASAR 信息
+        run: |
           echo "=== ASAR 文件信息 ==="
-          echo "文件路径: $ASAR_PATH"
-          echo "文件大小: $(du -h $ASAR_PATH | cut -f1)"
-          echo "MD5: $(md5sum $ASAR_PATH | cut -d' ' -f1)"
+          echo "文件路径: ${{ env.ASAR_RELEASE_PATH }}"
+          echo "文件大小: $(du -h ${{ env.ASAR_RELEASE_PATH }} | cut -f1)"
+          echo "MD5: $(md5sum ${{ env.ASAR_RELEASE_PATH }} | cut -d' ' -f1)"
           echo "=== 构建完成 ==="
