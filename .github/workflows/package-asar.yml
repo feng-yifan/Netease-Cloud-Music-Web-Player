@@ -54,15 +54,25 @@ jobs:
           path: dist/linux-unpacked/resources/app.asar
           retention-days: 30
 
-      - name: 重命名 ASAR 文件（添加版本号）
+      - name: 创建资源包（ASAR + desktop + SVG）
         run: |
           ASAR_PATH="dist/linux-unpacked/resources/app.asar"
           if [ "${{ github.ref_type }}" = "tag" ]; then
             TAG_NAME="${{ github.ref_name }}"
-            NEW_NAME="dist/app-${TAG_NAME}.asar"
-            cp "$ASAR_PATH" "$NEW_NAME"
-            echo "ASAR_RELEASE_PATH=$NEW_NAME" >> $GITHUB_ENV
-            echo "重命名: $ASAR_PATH -> $NEW_NAME"
+            RESOURCES_DIR="dist/resources"
+            mkdir -p "$RESOURCES_DIR"
+            cp "$ASAR_PATH" "$RESOURCES_DIR/"
+            cp "build/netease-cloud-music-web-player.desktop" "$RESOURCES_DIR/"
+            cp "build/netease-cloud-music-web-player" "$RESOURCES_DIR/"
+            cp "build/netease-cloud-music.svg" "$RESOURCES_DIR/"
+            RESOURCES_PACKAGE="dist/${pkgname}-resources-${TAG_NAME}.tar.gz"
+            tar -czf "$RESOURCES_PACKAGE" -C "$RESOURCES_DIR" .
+            cd dist
+            sha256sum "${pkgname}-resources-${TAG_NAME}.tar.gz" > "${pkgname}-resources-${TAG_NAME}.tar.gz.sha256"
+            echo "ASAR_RELEASE_PATH=$RESOURCES_PACKAGE" >> $GITHUB_ENV
+            echo "ASAR_CHECKSUM_PATH=dist/${pkgname}-resources-${TAG_NAME}.tar.gz.sha256" >> $GITHUB_ENV
+            echo "创建资源包: $RESOURCES_PACKAGE"
+            echo "生成校验文件: ${pkgname}-resources-${TAG_NAME}.tar.gz.sha256"
           else
             echo "ASAR_RELEASE_PATH=$ASAR_PATH" >> $GITHUB_ENV
           fi
@@ -72,14 +82,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "正在上传 ASAR 到 Release ${{ github.ref_name }}..."
-          gh release upload "${{ github.ref_name }}" "${{ env.ASAR_RELEASE_PATH }}" --clobber
-          echo "✓ ASAR 文件已上传到 Release"
+          echo "正在上传资源包到 Release ${{ github.ref_name }}..."
+          gh release upload "${{ github.ref_name }}" "${{ env.ASAR_RELEASE_PATH }}" "${{ env.ASAR_CHECKSUM_PATH }}" --clobber
+          echo "✓ 资源包和校验文件已上传到 Release"
 
-      - name: 显示 ASAR 信息
+      - name: 显示资源包信息
         run: |
-          echo "=== ASAR 文件信息 ==="
+          echo "=== 资源包信息 ==="
           echo "文件路径: ${{ env.ASAR_RELEASE_PATH }}"
-          echo "文件大小: $(du -h ${{ env.ASAR_RELEASE_PATH }} | cut -f1)"
-          echo "MD5: $(md5sum ${{ env.ASAR_RELEASE_PATH }} | cut -d' ' -f1)"
+          echo "校验文件: ${{ env.ASAR_CHECKSUM_PATH }}"
+          if [ -f "${{ env.ASAR_RELEASE_PATH }}" ]; then
+            echo "文件大小: $(du -h ${{ env.ASAR_RELEASE_PATH }} | cut -f1)"
+            echo "SHA256: $(sha256sum ${{ env.ASAR_RELEASE_PATH }} | cut -d' ' -f1)"
+          fi
           echo "=== 构建完成 ==="

@@ -6,27 +6,17 @@ pkgdesc="基于网页播放器封装的网易云音乐客户端"
 arch=('x86_64')
 license=('unknown')
 depends=('electron')
-makedepends=('npm')
-source=("$pkgname-$pkgver.tar.gz::https://github.com/feng-yifan/$pkgname/archive/$pkgver.tar.gz")
-md5sums=('SKIP')
-prepare() {
-  cd "$srcdir/$pkgname-$pkgver"
-  npm install --no-audit --no-fund
-}
+source=("$pkgname-resources-$pkgver.tar.gz::https://github.com/feng-yifan/$pkgname/releases/download/$pkgver/$pkgname-resources-$pkgver.tar.gz")
+sha256sums=('SKIP')
 package() {
-  cd "$srcdir/$pkgname-$pkgver"
-  install -dm755 "$pkgdir/usr/lib/$pkgname"
-  cp -r --no-preserve=ownership * "$pkgdir/usr/lib/$pkgname/"
-  install -dm755 "$pkgdir/usr/bin"
-  cat > "$pkgdir/usr/bin/$pkgname" << 'EOF'
-#!/bin/sh
-exec electron /usr/lib/netease-cloud-music-web-player "$@"
-EOF
-  chmod 755 "$pkgdir/usr/bin/$pkgname"
-  install -dm755 "$pkgdir/usr/share/applications"
-  install -m644 "$srcdir/$pkgname-$pkgver/build/$pkgname.desktop" "$pkgdir/usr/share/applications/"
-  install -dm755 "$pkgdir/usr/share/icons/hicolor/384x384/apps"
-  install -m644 "$srcdir/$pkgname-$pkgver/build/netease-cloud-music.png" "$pkgdir/usr/share/icons/hicolor/384x384/apps/$pkgname.png"
-  install -dm755 "$pkgdir/usr/share/icons/hicolor/scalable/apps"
-  install -m644 "$srcdir/$pkgname-$pkgver/build/netease-cloud-music.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/$pkgname.svg"
+	cd "$srcdir"
+	tar -xzf "$pkgname-resources-$pkgver.tar.gz"
+	install -dm755 "$pkgdir/usr/lib/$pkgname"
+	cp "app.asar" "$pkgdir/usr/lib/$pkgname/"
+	install -dm755 "$pkgdir/usr/bin"
+	install -m755 "netease-cloud-music-web-player" "$pkgdir/usr/bin/$pkgname"
+	install -dm755 "$pkgdir/usr/share/applications"
+	install -m644 "netease-cloud-music-web-player.desktop" "$pkgdir/usr/share/applications/"
+	install -dm755 "$pkgdir/usr/share/icons/hicolor/scalable/apps"
+	install -m644 "netease-cloud-music.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/$pkgname.svg"
 }

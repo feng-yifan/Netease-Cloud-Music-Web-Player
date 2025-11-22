@@ -1,0 +1,2 @@
+#!/bin/sh
+exec electron /usr/lib/netease-cloud-music-web-player/app.asar "$@"
