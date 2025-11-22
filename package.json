@@ -11,6 +11,7 @@
     "type": "git",
     "url": "https://github.com/feng-yifan/Netease-Cloud-Music-Web-Player.git"
   },
+  "license": "MIT",
   "devDependencies": {
     "electron": "^38.7.1",
     "electron-builder": "^26.0.12"

@@ -1,3 +1,12 @@
+/**
+ * Copyright (c) 2025 冯一凡 <fengyifan@blocgo.com>
+ *
+ * 本项目采用 MIT License 开源协议，详见 LICENSE 文件
+ *
+ * Netease Cloud Music Web Player - Electron 桌面客户端
+ * 本项目非网易云音乐官方产品，与网易公司无任何关联
+ */
+
 const {app, Menu} = require('electron');
 const WindowManager = require('./modules/WindowManager');
 const TrayManager = require('./modules/TrayManager');
