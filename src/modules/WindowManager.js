@@ -1,6 +1,7 @@
 const { BrowserWindow, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { URL } = require('url');
 const logger = require('../utils/logger');
 const config = require('../config/default');
 
@@ -110,15 +111,45 @@ class WindowManager {
 
       // 处理新窗口打开事件
       this.mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-        shell.openExternal(url);
+        try {
+          const urlObj = new URL(url);
+          // 如果是网易云音乐域名，在应用内打开
+          if (urlObj.hostname.includes('music.163.com')) {
+            logger.debug('应用内打开链接:', url);
+            return { action: 'allow' };
+          }
+          // 其他链接在外部浏览器打开
+          logger.debug('外部浏览器打开链接:', url);
+          shell.openExternal(url);
+        } catch (error) {
+          logger.error('处理新窗口链接失败:', error.message);
+        }
         return { action: 'deny' };
       });
 
       // 处理页面内链接点击
       this.mainWindow.webContents.on('will-navigate', (event, url) => {
-        if (url !== this.mainWindow.webContents.getURL()) {
+        const currentUrl = this.mainWindow.webContents.getURL();
+        // 如果链接与当前页面相同，允许导航（正常页面跳转）
+        if (url === currentUrl) {
+          logger.debug('允许同页面导航:', url);
+          return;
+        }
+
+        try {
+          const urlObj = new URL(url);
+          // 如果是网易云音乐域名，允许在应用内导航
+          if (urlObj.hostname.includes('music.163.com')) {
+            logger.debug('应用内导航到:', url);
+            return;
+          }
+          // 其他链接在外部浏览器打开
+          logger.debug('外部浏览器打开导航链接:', url);
           event.preventDefault();
           shell.openExternal(url);
+        } catch (error) {
+          logger.error('处理导航链接失败:', error.message);
+          event.preventDefault();
         }
       });
 
