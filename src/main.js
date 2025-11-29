@@ -18,13 +18,33 @@ process.on('uncaughtException', (error) => {
   logger.error('错误堆栈:', error.stack);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
   logger.error('未处理的Promise拒绝:', reason);
 });
 
 // 应用实例
 let windowManager;
 let trayManager;
+
+// 请求单实例锁
+const gotTheLock = app.requestSingleInstanceLock();
+
+// 如果获取锁失败，说明已经有实例在运行
+if (!gotTheLock) {
+  logger.warn('检测到另一个应用实例正在运行，当前实例将退出');
+  app.quit();
+  process.exit(0);
+}
+
+// 监听 second-instance 事件，当有新实例尝试启动时触发
+app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
+  logger.info('检测到新的应用实例启动，激活已存在的窗口');
+
+  if (windowManager) {
+    // 显示并聚焦已存在的窗口
+    windowManager.showWindow();
+  }
+});
 
 // 初始化应用
 function initializeApp() {
