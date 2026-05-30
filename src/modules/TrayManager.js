@@ -4,9 +4,10 @@ const logger = require('../utils/logger');
 const config = require('../config');
 
 class TrayManager {
-  constructor(windowManager) {
+  constructor(windowManager, playbackController = null) {
     this.tray = null;
     this.windowManager = windowManager;
+    this.playbackController = playbackController;
     // 设置日志模块名称
     logger.setModule('TrayManager');
   }
@@ -83,6 +84,31 @@ class TrayManager {
       },
       { type: 'separator' },
       {
+        label: '上一首',
+        enabled: !!this.playbackController,
+        click: () => {
+          logger.debug('托盘菜单：上一首');
+          this.handlePlaybackControl('previous');
+        }
+      },
+      {
+        label: '播放/暂停',
+        enabled: !!this.playbackController,
+        click: () => {
+          logger.debug('托盘菜单：播放/暂停');
+          this.handlePlaybackControl('togglePlayPause');
+        }
+      },
+      {
+        label: '下一首',
+        enabled: !!this.playbackController,
+        click: () => {
+          logger.debug('托盘菜单：下一首');
+          this.handlePlaybackControl('next');
+        }
+      },
+      { type: 'separator' },
+      {
         label: '查看日志目录',
         click: () => {
           logger.debug('托盘菜单：查看日志目录');
@@ -102,6 +128,21 @@ class TrayManager {
 
     this.tray.setContextMenu(contextMenu);
     logger.debug('托盘右键菜单已创建');
+  }
+
+  // 处理播放控制
+  handlePlaybackControl(action) {
+    if (!this.playbackController) return;
+
+    const control = this.playbackController[action];
+    if (typeof control !== 'function') {
+      logger.warn(`未知播放控制命令: ${action}`);
+      return;
+    }
+
+    Promise.resolve(control.call(this.playbackController)).catch(error => {
+      logger.error(`托盘播放控制执行失败: ${error.message}`);
+    });
   }
 
   // 打开日志目录

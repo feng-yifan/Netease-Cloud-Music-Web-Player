@@ -10,6 +10,7 @@
 const {app, Menu} = require('electron');
 const WindowManager = require('./modules/WindowManager');
 const TrayManager = require('./modules/TrayManager');
+const PlaybackController = require('./modules/PlaybackController');
 const logger = require('./utils/logger');
 
 // 设置主进程日志模块名称
@@ -38,6 +39,7 @@ function parseCommandLineArgs() {
 // 应用实例
 let windowManager;
 let trayManager;
+let playbackController;
 
 // 请求单实例锁
 const gotTheLock = app.requestSingleInstanceLock();
@@ -71,8 +73,10 @@ function initializeApp(options = {}) {
     windowManager = new WindowManager();
     // 创建主窗口，传递启动选项
     windowManager.createMainWindow({ startMinimized: options.minimize });
+    // 创建播放控制器
+    playbackController = new PlaybackController(windowManager);
     // 创建托盘管理器
-    trayManager = new TrayManager(windowManager);
+    trayManager = new TrayManager(windowManager, playbackController);
     try {
       trayManager.createTray();
     } catch (error) {
