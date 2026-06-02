@@ -9,6 +9,7 @@ class WindowManager {
   constructor() {
     this.mainWindow = null;
     this.isQuiting = false;
+    this.zoomLevel = 0;
     // 设置日志模块名称
     logger.setModule('WindowManager');
   }
@@ -23,7 +24,8 @@ class WindowManager {
           width: state.width || config.window.defaultWidth,
           height: state.height || config.window.defaultHeight,
           x: state.x,
-          y: state.y
+          y: state.y,
+          zoomLevel: state.zoomLevel !== undefined ? state.zoomLevel : config.zoom.defaultLevel
         };
       }
     } catch (error) {
@@ -45,7 +47,8 @@ class WindowManager {
         width: bounds.width,
         height: bounds.height,
         x: bounds.x,
-        y: bounds.y
+        y: bounds.y,
+        zoomLevel: this.zoomLevel
       };
 
       // 确保目录存在
@@ -85,6 +88,10 @@ class WindowManager {
         show: false // 先不显示，等加载完成后再显示
       });
 
+      // 应用保存的缩放级别
+      this.zoomLevel = windowState.zoomLevel;
+      this.mainWindow.webContents.setZoomLevel(this.zoomLevel);
+
       // 设置用户代理
       this.mainWindow.webContents.setUserAgent(config.app.userAgent);
 
@@ -123,6 +130,32 @@ class WindowManager {
       this.mainWindow.on('unmaximize', () => logger.debug('窗口已还原'));
       this.mainWindow.on('focus', () => logger.debug('窗口获得焦点'));
       this.mainWindow.on('blur', () => logger.debug('窗口失去焦点'));
+
+      // 缩放事件 (Ctrl + 滚轮)
+      this.mainWindow.webContents.on('zoom-changed', (_event, direction) => {
+        const delta = direction === 'in' ? config.zoom.step : -config.zoom.step;
+        const newLevel = Math.max(config.zoom.minLevel,
+          Math.min(config.zoom.maxLevel, this.zoomLevel + delta));
+        this.setZoomLevel(newLevel);
+      });
+
+      // 键盘缩放快捷键 (Ctrl + +/-/0)
+      this.mainWindow.webContents.on('before-input-event', (event, input) => {
+        if (!input.control && !input.meta) return;
+
+        if (input.key === '=' || input.key === '+') {
+          event.preventDefault();
+          const newLevel = Math.min(this.zoomLevel + config.zoom.step, config.zoom.maxLevel);
+          this.setZoomLevel(newLevel);
+        } else if (input.key === '-') {
+          event.preventDefault();
+          const newLevel = Math.max(this.zoomLevel - config.zoom.step, config.zoom.minLevel);
+          this.setZoomLevel(newLevel);
+        } else if (input.key === '0') {
+          event.preventDefault();
+          this.setZoomLevel(config.zoom.defaultLevel);
+        }
+      });
 
       // 页面加载事件监听
       this.mainWindow.webContents.on('did-start-loading', () => logger.debug('页面开始加载'));
@@ -227,6 +260,22 @@ class WindowManager {
   // 设置退出标志
   setQuiting(isQuiting) {
     this.isQuiting = isQuiting;
+  }
+
+  // 设置缩放级别
+  setZoomLevel(level) {
+    const rounded = Math.round(level / config.zoom.step) * config.zoom.step;
+    const clamped = Math.max(config.zoom.minLevel,
+      Math.min(config.zoom.maxLevel, rounded));
+
+    if (this.zoomLevel !== clamped) {
+      this.zoomLevel = clamped;
+      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+        this.mainWindow.webContents.setZoomLevel(clamped);
+      }
+      this.saveWindowState();
+      logger.debug(`缩放级别已更新: ${clamped}`);
+    }
   }
 
   // 销毁窗口

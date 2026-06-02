@@ -39,7 +39,15 @@ const config = {
   tray: {
     tooltip: '网易云音乐',
     iconPath: path.join(__dirname, '../assets/icon.png')
-  }
+  },
+
+  // 缩放配置
+  zoom: {
+    defaultLevel: 0,
+    minLevel: -5,
+    maxLevel: 5,
+    step: 0.5
+  },
 };
 
 module.exports = config;
