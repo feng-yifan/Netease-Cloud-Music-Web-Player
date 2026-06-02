@@ -23,15 +23,15 @@ npm install
 
 ### 核心模块结构
 - **src/main.js** - 应用主进程入口，负责应用生命周期管理
-- **src/modules/WindowManager.js** - 窗口管理器，处理 BrowserWindow 创建和状态持久化
+- **src/modules/WindowManager.js** - 窗口管理器，处理 BrowserWindow 创建、状态持久化和缩放管理
 - **src/modules/TrayManager.js** - 系统托盘管理器，处理托盘图标和菜单
 - **src/utils/logger.js** - 日志工具，提供分级日志记录
-- **src/config/default.js** - 应用默认配置
+- **src/config/default.js** - 应用默认配置（窗口、日志、托盘、缩放等）
 
 ### 关键设计模式
 1. **模块化架构**：每个功能模块独立封装，通过类实现
 2. **事件驱动**：使用 Electron 的 ipcMain 处理进程间通信
-3. **状态持久化**：窗口大小位置自动保存到用户数据目录
+3. **状态持久化**：窗口大小位置和缩放级别自动保存到用户数据目录（window-state.json）
 4. **安全配置**：禁用 Node 集成，启用上下文隔离
 
 ### 构建配置
@@ -45,6 +45,7 @@ npm install
 3. **窗口状态**：默认尺寸 1200x800，最小尺寸 800x600
 4. **托盘功能**：左键显示/隐藏窗口，右键提供退出菜单
 5. **日志级别**：默认 info，支持 error/warn/info/debug
+6. **缩放功能**：支持通过 Ctrl+滚轮、Ctrl+`+`/`-`/`0` 快捷键缩放页面。使用 Electron webContents.setZoomLevel() API，对数刻度 0=100%，步进 0.5，范围 -5 到 5。缩放级别持久化存储于 window-state.json 的 zoomLevel 字段。before-input-event 中使用 event.preventDefault() 防止浏览器默认缩放与自定义缩放冲突。
 
 ### CI/CD 流程
 工作流在推送版本标签（格式：x.x.x）时触发：
