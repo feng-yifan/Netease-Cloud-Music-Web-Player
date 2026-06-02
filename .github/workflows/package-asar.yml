@@ -27,11 +27,11 @@ jobs:
     steps:
       # 步骤 1: 检出代码仓库
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # 步骤 2: 设置 Node.js 运行环境
       - name: 设置 Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           # 使用 Node.js 20.x 版本
           node-version: '20.x'
@@ -95,7 +95,7 @@ jobs:
 
       # 步骤 8: 将 SHA256 值作为构建产物上传，供后续作业使用
       - name: 上传 SHA256 为 artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sha256-value  # 产物名称
           path: sha256-value.txt  # 要上传的文件路径
@@ -119,11 +119,11 @@ jobs:
     steps:
       # 步骤 1: 检出代码仓库
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # 步骤 2: 下载前一个作业上传的 SHA256 值产物
       - name: 下载 SHA256 artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: sha256-value  # 产物名称
 
@@ -173,7 +173,7 @@ jobs:
       # 步骤 7: 将 PKGBUILD 和 .SRCINFO 上传为构建产物
       # 供下一个作业（publish-aur）使用
       - name: 上传 PKGBUILD 和 .SRCINFO
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: aur-files  # 产物名称
           include-hidden-files: true  # 包含隐藏文件（.SRCINFO 以点开头）
@@ -195,7 +195,7 @@ jobs:
     steps:
       # 步骤 1: 检出代码仓库
       - name: 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # 步骤 2: 配置 SSH 密钥用于访问 AUR Git 仓库
       # AUR 使用 SSH 协议进行 Git 操作
@@ -207,7 +207,7 @@ jobs:
 
       # 步骤 3: 下载前一个作业生成的 AUR 包文件
       - name: 下载 AUR 文件
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: aur-files  # 产物名称
 
