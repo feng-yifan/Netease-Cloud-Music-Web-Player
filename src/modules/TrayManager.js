@@ -1,6 +1,7 @@
 const { Tray, Menu, nativeImage, shell } = require('electron');
 const fs = require('fs');
 const logger = require('../utils/logger');
+const defaultConfig = require('../config/default');
 const config = require('../config');
 
 class TrayManager {
@@ -12,55 +13,60 @@ class TrayManager {
     logger.setModule('TrayManager');
   }
 
+  // 加载指定图标
+  loadIcon(path) {
+    if (!fs.existsSync(path)) {
+      throw new Error(`图标文件 "${path}" 不存在`);
+    }
+
+    try {
+      return nativeImage.createFromPath(path);
+    } catch (error) {
+      throw new Error(`无法加载图标: ${error.message}`);
+    }
+  }
+
   // 加载托盘图标
   loadTrayIcon() {
-    if (fs.existsSync(config.tray.iconPath)) {
+    for (const path of [config.tray.iconPath, defaultConfig.tray.iconPath]) {
       try {
-        const icon = nativeImage.createFromPath(config.tray.iconPath);
-        logger.info('使用本地图标');
+        const icon = this.loadIcon(path);
+        logger.info('成功加载托盘图标');
         return icon;
       } catch (error) {
-        logger.error('本地图标加载失败:', error.message);
-        throw new Error(`无法加载图标: ${error.message}`);
+        logger.warn(`加载托盘图标失败: ${error.message}`);
       }
-    } else {
-      const errorMsg = `图标文件不存在: ${config.tray.iconPath}`;
-      logger.error(errorMsg);
-      throw new Error(errorMsg);
     }
+
+    logger.error('托盘图标加载失败, 将使用空图标确保托盘工作');
+    return nativeImage.createEmpty();
   }
 
   // 创建托盘图标
   createTray() {
-    try {
-      // 加载托盘图标（可能抛出异常）
-      const trayIcon = this.loadTrayIcon();
+    const trayIcon = this.loadTrayIcon();
 
-      // 创建托盘
-      this.tray = new Tray(trayIcon);
-      logger.info('系统托盘创建成功');
+    // 创建托盘
+    this.tray = new Tray(trayIcon);
+    logger.info('系统托盘创建成功');
 
-      // 设置托盘提示
-      this.tray.setToolTip(config.tray.tooltip);
+    // 设置托盘提示
+    this.tray.setToolTip(config.tray.tooltip);
 
-      // 创建右键菜单
-      this.createContextMenu();
+    // 创建右键菜单
+    this.createContextMenu();
 
-      // 绑定左键点击事件
-      this.tray.on('click', () => {
-        this.handleTrayClick();
-      });
+    // 绑定左键点击事件
+    this.tray.on('click', () => {
+      this.handleTrayClick();
+    });
 
-      // 绑定右键点击事件
-      this.tray.on('right-click', () => {
-        logger.debug('托盘右键菜单显示');
-      });
+    // 绑定右键点击事件
+    this.tray.on('right-click', () => {
+      logger.debug('托盘右键菜单显示');
+    });
 
-      logger.info('系统托盘事件绑定完成');
-    } catch (error) {
-      logger.error('创建系统托盘失败:', error.message);
-      throw error;
-    }
+    logger.info('系统托盘事件绑定完成');
   }
 
   // 创建右键菜单
