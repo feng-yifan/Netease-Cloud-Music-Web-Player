@@ -25,7 +25,7 @@ class WindowManager {
           height: state.height || config.window.defaultHeight,
           x: state.x,
           y: state.y,
-          zoomLevel: state.zoomLevel !== undefined ? state.zoomLevel : config.zoom.defaultLevel
+          zoomLevel: this.normalizeZoomLevel(state.zoomLevel)
         };
       }
     } catch (error) {
@@ -33,7 +33,8 @@ class WindowManager {
     }
     return {
       width: config.window.defaultWidth,
-      height: config.window.defaultHeight
+      height: config.window.defaultHeight,
+      zoomLevel: config.zoom.defaultLevel
     };
   }
 
@@ -88,8 +89,8 @@ class WindowManager {
         show: false // 先不显示，等加载完成后再显示
       });
 
-      // 应用保存的缩放级别
-      this.zoomLevel = windowState.zoomLevel;
+      // 应用保存的缩放级别（首次启动没有状态文件或状态值异常时回退到默认值）
+      this.zoomLevel = this.normalizeZoomLevel(windowState.zoomLevel);
       this.mainWindow.webContents.setZoomLevel(this.zoomLevel);
 
       // 设置用户代理
@@ -260,6 +261,11 @@ class WindowManager {
   // 设置退出标志
   setQuiting(isQuiting) {
     this.isQuiting = isQuiting;
+  }
+
+  // 归一化缩放级别，避免 undefined 等无效值传给 setZoomLevel 导致异常
+  normalizeZoomLevel(level) {
+    return Number.isFinite(level) ? level : config.zoom.defaultLevel;
   }
 
   // 设置缩放级别
